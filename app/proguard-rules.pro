@@ -23,3 +23,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep class javax.xml.crypto.dsig.** { *; }
+-dontwarn javax.xml.crypto.dsig.**
+-keep class javax.xml.crypto.** { *; }
+-dontwarn javax.xml.crypto.**
+
+-keep class org.spongycastle.** { *; }
+-dontwarn org.spongycastle.**
