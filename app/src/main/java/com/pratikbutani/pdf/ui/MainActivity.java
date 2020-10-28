@@ -4,7 +4,8 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-
+import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,18 +14,20 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.itextpdf.text.BaseColor;
-import com.itextpdf.text.Chunk;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.PageSize;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.BaseFont;
-import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.text.pdf.draw.LineSeparator;
+import com.itextpdf.kernel.colors.Color;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfDocumentInfo;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.draw.DottedLine;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.LineSeparator;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.property.TextAlignment;
 import com.pratikbutani.pdf.FileUtils;
 import com.pratikbutani.pdf.R;
 import com.pratikbutani.pdf.permission.PermissionsActivity;
@@ -44,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
 
     PermissionsChecker checker;
 
+    String dest;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,23 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
         checker = new PermissionsChecker(this);
 
-        createPdf(FileUtils.getAppPath(mContext) + "123.pdf");
-
-        /**
-         *
-         */
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                if (checker.lacksPermissions(REQUIRED_PERMISSION)) {
-                    PermissionsActivity.startActivityForResult(MainActivity.this, PERMISSION_REQUEST_CODE, REQUIRED_PERMISSION);
-                } else {
-                    createPdf(FileUtils.getAppPath(mContext) + "123.pdf");
-                }
-            }
-        });
+        dest = FileUtils.getAppPath(mContext) + "123.pdf";
     }
 
     public void createPdf(String dest) {
@@ -85,101 +74,92 @@ public class MainActivity extends AppCompatActivity {
             /**
              * Creating Document
              */
-            Document document = new Document();
+            PdfWriter pdfWriter = new PdfWriter(new FileOutputStream(dest));
+            PdfDocument pdfDocument = new PdfDocument(pdfWriter);
+            PdfDocumentInfo info = pdfDocument.getDocumentInfo();
 
-            // Location to save
-            PdfWriter.getInstance(document, new FileOutputStream(dest));
+            info.setTitle("Example of iText7 by Pratik Butani");
+            info.setAuthor("Pratik Butani");
+            info.setSubject("iText7 PDF Demo");
+            info.setKeywords("iText, PDF, Pratik Butani");
+            info.setCreator("A simple tutorial example");
 
-            // Open to write
-            document.open();
-
-            // Document Settings
-            document.setPageSize(PageSize.A4);
-            document.addCreationDate();
-            document.addAuthor("Android School");
-            document.addCreator("Pratik Butani");
+            Document document = new Document(pdfDocument, PageSize.A4, true);
 
             /***
              * Variables for further use....
              */
-            BaseColor mColorAccent = new BaseColor(0, 153, 204, 255);
+            Color mColorAccent = new DeviceRgb(153, 204, 255);
+            Color mColorBlack = new DeviceRgb(0, 0, 0);
             float mHeadingFontSize = 20.0f;
             float mValueFontSize = 26.0f;
 
             /**
              * How to USE FONT....
              */
-            BaseFont urName = BaseFont.createFont("assets/fonts/brandon_medium.otf", "UTF-8", BaseFont.EMBEDDED);
+            PdfFont font = PdfFontFactory.createFont("assets/fonts/brandon_medium.otf", "UTF-8", true);
 
             // LINE SEPARATOR
-            LineSeparator lineSeparator = new LineSeparator();
-            lineSeparator.setLineColor(new BaseColor(0, 0, 0, 68));
+            LineSeparator lineSeparator = new LineSeparator(new DottedLine());
+            lineSeparator.setStrokeColor(new DeviceRgb(0, 0, 68));
 
             // Title Order Details...
             // Adding Title....
-            Font mOrderDetailsTitleFont = new Font(urName, 36.0f, Font.NORMAL, BaseColor.BLACK);
-            Chunk mOrderDetailsTitleChunk = new Chunk("Order Details", mOrderDetailsTitleFont);
-            Paragraph mOrderDetailsTitleParagraph = new Paragraph(mOrderDetailsTitleChunk);
-            mOrderDetailsTitleParagraph.setAlignment(Element.ALIGN_CENTER);
+            Text mOrderDetailsTitleChunk = new Text("Order Details").setFont(font).setFontSize(36.0f).setFontColor(mColorBlack);
+            Paragraph mOrderDetailsTitleParagraph = new Paragraph(mOrderDetailsTitleChunk)
+                    .setTextAlignment(TextAlignment.CENTER);
             document.add(mOrderDetailsTitleParagraph);
 
             // Fields of Order Details...
             // Adding Chunks for Title and value
-            Font mOrderIdFont = new Font(urName, mHeadingFontSize, Font.NORMAL, mColorAccent);
-            Chunk mOrderIdChunk = new Chunk("Order No:", mOrderIdFont);
+            Text mOrderIdChunk = new Text("Order No:").setFont(font).setFontSize(mHeadingFontSize).setFontColor(mColorAccent);
             Paragraph mOrderIdParagraph = new Paragraph(mOrderIdChunk);
             document.add(mOrderIdParagraph);
 
-            Font mOrderIdValueFont = new Font(urName, mValueFontSize, Font.NORMAL, BaseColor.BLACK);
-            Chunk mOrderIdValueChunk = new Chunk("#123123", mOrderIdValueFont);
+            Text mOrderIdValueChunk = new Text("#123123").setFont(font).setFontSize(mValueFontSize).setFontColor(mColorBlack);
             Paragraph mOrderIdValueParagraph = new Paragraph(mOrderIdValueChunk);
             document.add(mOrderIdValueParagraph);
 
             // Adding Line Breakable Space....
             document.add(new Paragraph(""));
             // Adding Horizontal Line...
-            document.add(new Chunk(lineSeparator));
+            document.add(lineSeparator);
             // Adding Line Breakable Space....
             document.add(new Paragraph(""));
 
             // Fields of Order Details...
-            Font mOrderDateFont = new Font(urName, mHeadingFontSize, Font.NORMAL, mColorAccent);
-            Chunk mOrderDateChunk = new Chunk("Order Date:", mOrderDateFont);
+            Text mOrderDateChunk = new Text("Order Date:").setFont(font).setFontSize(mHeadingFontSize).setFontColor(mColorAccent);
             Paragraph mOrderDateParagraph = new Paragraph(mOrderDateChunk);
             document.add(mOrderDateParagraph);
 
-            Font mOrderDateValueFont = new Font(urName, mValueFontSize, Font.NORMAL, BaseColor.BLACK);
-            Chunk mOrderDateValueChunk = new Chunk("06/07/2017", mOrderDateValueFont);
+            Text mOrderDateValueChunk = new Text("06/07/2017").setFont(font).setFontSize(mValueFontSize).setFontColor(mColorBlack);
             Paragraph mOrderDateValueParagraph = new Paragraph(mOrderDateValueChunk);
             document.add(mOrderDateValueParagraph);
 
             document.add(new Paragraph(""));
-            document.add(new Chunk(lineSeparator));
+            document.add(lineSeparator);
             document.add(new Paragraph(""));
 
             // Fields of Order Details...
-            Font mOrderAcNameFont = new Font(urName, mHeadingFontSize, Font.NORMAL, mColorAccent);
-            Chunk mOrderAcNameChunk = new Chunk("Account Name:", mOrderAcNameFont);
+            Text mOrderAcNameChunk = new Text("Account Name:").setFont(font).setFontSize(mHeadingFontSize).setFontColor(mColorAccent);
             Paragraph mOrderAcNameParagraph = new Paragraph(mOrderAcNameChunk);
             document.add(mOrderAcNameParagraph);
 
-            Font mOrderAcNameValueFont = new Font(urName, mValueFontSize, Font.NORMAL, BaseColor.BLACK);
-            Chunk mOrderAcNameValueChunk = new Chunk("Pratik Butani", mOrderAcNameValueFont);
+            Text mOrderAcNameValueChunk = new Text("Pratik Butani").setFont(font).setFontSize(mValueFontSize).setFontColor(mColorBlack);
             Paragraph mOrderAcNameValueParagraph = new Paragraph(mOrderAcNameValueChunk);
             document.add(mOrderAcNameValueParagraph);
 
             document.add(new Paragraph(""));
-            document.add(new Chunk(lineSeparator));
+            document.add(lineSeparator);
             document.add(new Paragraph(""));
 
             document.close();
 
             Toast.makeText(mContext, "Created... :)", Toast.LENGTH_SHORT).show();
 
-            FileUtils.openFile(mContext, new File(dest));
 
-        } catch (IOException | DocumentException ie) {
-            LOGE("createPdf: Error " + ie.getLocalizedMessage());
+        } catch (IOException e) {
+            LOGE("createPdf: Error " + e.getLocalizedMessage());
         } catch (ActivityNotFoundException ae) {
             Toast.makeText(mContext, "No application found to open this file.", Toast.LENGTH_SHORT).show();
         }
@@ -215,5 +195,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void createPDF(View view) {
+        if (checker.lacksPermissions(REQUIRED_PERMISSION)) {
+            PermissionsActivity.startActivityForResult(MainActivity.this, PERMISSION_REQUEST_CODE, REQUIRED_PERMISSION);
+        } else {
+            createPdf(dest);
+        }
+    }
+
+    public void openPDF(View view) {
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    FileUtils.openFile(mContext, new File(dest));
+                } catch (Exception e) {
+                    Log.d("TAG", "run: ERror");
+                }
+            }
+        }, 1000);
     }
 }
